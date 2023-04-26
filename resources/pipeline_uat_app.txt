@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+    environment {
+        nodo_jenkins_T2 = "jenkins_agent_T2"
+        Ruta_Proyectos_T2 = "/data/workdir_maven_slave_T2"
+        aplicacion = "./middleware_osb/DeliveryDatasources_OSB12C_UAT.yml"
+        Nombre_Pipeline = "Nom_Pipeline"
+        componente="cambiar_componente"
+        host = "${env.MAVEN_IP_T2}"
+    }
+
+    stages {
+
+        stage('DEPLOY') {
+            steps {
+                node("${env.nodo_jenkins_T2}") {
+                    script {
+
+                         echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+                        sh "sleep 3"
+                        def delivery_config_path = "${Ruta_Proyectos_T2}/uat/${Nombre_Pipeline}"
+
+                        def deliver = "false"
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            deliver = sshCommand remote: remote, command: (
+                              "    if [ -f ${delivery_config_path}/delivery.yml ]; then "
+                                + " echo true; "
+                                + "else "
+                                + " echo false;"
+                                + "fi"
+                            )
+                        }
+
+
+                        if (deliver == 'true'){
+                            echo """
+                        ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                        ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                        ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                            """
+
+                            //sh """ ssh ansible@ansible /home/ansible/playbooks/ContinuousDelivery/start.sh  ${delivery_config_path} ${Build_id} """
+                            withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                                def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                                deliver = sshCommand remote: remote, command: (
+                                    "ContinuousDelivery/start_APP_fija.sh  ${delivery_config_path} ${BUILD_MASTER}  ${env.target} ${BUILD_MASTER} ${aplicacion} ${componente} | tee logs_CD/cambiar.txt"
+                                )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                           }
+                           archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+
+                        }else{
+                            echo "No se detectó configuración de entrega continua. Saltando paso..."
+                        }
+
+
+                    }
+                }
+            }
+        }
+
+    }
+}

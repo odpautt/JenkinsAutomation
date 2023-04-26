@@ -1,0 +1,15 @@
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-PrepaidMonitor/job/Operaciones/job/UAT/job/APP-Promociones-PrepaidMonitor-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Promotion/job/Operaciones/job/UAT/job/APP-Promociones-Promotion-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Promotionreport/job/Operaciones/job/UAT/job/APP-Promociones-Promotionreport-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-RetrySystem/job/Operaciones/job/UAT/job/APP-Promociones-RetrySystem-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-RoamingClient/job/Operaciones/job/UAT/job/APP-Promociones-RoamingClient-Deploy_Test/configure
+rtbsmseventsnotification;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-RtbSmsEventsNotification/job/Operaciones/job/UAT/job/APP-Promociones-RtbSmsEventsNotification-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Sellingregister/job/Operaciones/job/UAT/job/APP-Promociones-Sellingregister-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-ServiceConciliation/job/Operaciones/job/UAT/job/APP-Promociones-ServiceConciliation-Deploy_Test/configure
+smsdiffuser;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Smsdiffuser/job/Operaciones/job/UAT/job/APP-Promociones-Smsdiffuser-Deploy_Test/configure
+smssender;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Smssender/job/Operaciones/job/UAT/job/APP-Promociones-Smssender-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-SubscriptionPackage/job/Operaciones/job/UAT/job/APP-Promociones-SubscriptionPackage-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Supportpromo/job/Operaciones/job/UAT/job/APP-Promociones-Supportpromo-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Trainingmng/job/Operaciones/job/UAT/job/APP-Promociones-Trainingmng-Deploy_Test/configure
+sindefinir;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-UserInfo/job/Operaciones/job/UAT/job/APP-Promociones-UserInfo-Deploy_Test/configure
+xdrnotification;http://10.100.82.238:8080/job/Indra-T1/job/APP-Promociones/job/APP-Promociones-Xdrnotification/job/Operaciones/job/UAT/job/APP-Promociones-Xdrnotification-Deploy_Test/configure

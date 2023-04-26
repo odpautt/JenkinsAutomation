@@ -1,0 +1,85 @@
+
+pipeline {
+    agent any
+	parameters{
+        string (name: 'ChangeOrder', description:'Se debe ingresar numero de la OC')
+	}
+    environment {
+
+		//Nombre del pipeline se declara APP-NombreCorrespondiente
+		Nombre_Pipeline = "nombre_base_aplicacion"
+		// Prueba de Funcionamiento aplicacion = "./fenix/PruebasWilliam.yml"
+		aplicacion = "./fenix/DeliveryDatasources_Fenix_Roll.yml"
+		//este es el nombre del nodo correspondiente a la torre
+		 nodo_jenkins_T1 = "jenkins_agent_T1"
+		//Ruta donde se almacenan todos los proyectos de T1
+		Ruta_Proyectos_T1 = "/data/workdir_maven_slave_T1/uat"
+		target = 'null'
+		componente = 'null'
+    }
+
+    stages {
+
+    stage('DEPLOY') {
+        steps {
+            node("${env.nodo_jenkins_T1}") {
+                script {
+				    if(params.ChangeOrder == ""){
+	                        error "Se debe ingresar el numero de la OC"
+	                }
+				    echo " ChangeOrder: ${ChangeOrder}"
+
+				    echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+                    sh "sleep 3"
+
+                    def delivery_config_path = "${Ruta_Proyectos_T1}/${Nombre_Pipeline}"
+
+                    def deliver = "false"
+                    withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            deliver = sshCommand remote: remote, command: (
+                             "   if [ -f ${delivery_config_path}/delivery.yml ]; then "
+                               + " echo true; "
+                               + "else "
+                               + " echo false;"
+                               + "fi"
+                        )
+                    }
+
+                    if (deliver == 'true'){
+                        echo """
+                       ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                       ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                       ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                           """
+
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            sshCommand remote: remote, command: (
+                                "ContinuousDelivery/start_APP_fija.sh  ${delivery_config_path} ${BUILD_ROLLBACK}  ${env.target} ${BUILD_ROLLBACK} ${aplicacion} ${env.componente} ${ChangeOrder} | tee logs_CD/cambiar.txt"
+                            )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                        }
+                        archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+
+						echo " ChangeOrder: ${ChangeOrder}"
+
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+							def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+								writeFile file: 'validacionCodificacion.sh', text: "#!/bin/bash \n" + "if [ -f /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/codificacionErronea.txt ]; then \n" + "rm /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/codificacionErronea.txt\n"+ "exit 1\n" +"else\n" +'echo "OK"\n' + "fi"
+								sshScript remote: remote, script: "validacionCodificacion.sh"
+						}
+
+                    }else{
+                        echo "No se detectó configuración de entrega continua. Saltando paso..."
+                    }
+                }
+            }
+        }
+    }
+    }
+}

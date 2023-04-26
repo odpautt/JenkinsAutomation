@@ -1,0 +1,96 @@
+pipeline{
+    agent any
+    environment {
+
+                NOMBRE_COMPONENTE = "nombre_componente"
+
+
+				MAJOR = '1'
+				MINOR = '0'
+				//Orchestrator Services
+				UIPATH_ORCH_URL = "https://netvm-prpa34.epmtelco.com.co/"
+				UIPATH_ORCH_LOGICAL_NAME = ""
+				UIPATH_ORCH_TENANT_NAME = "Desarrollo"
+				//UIPATH_ORCH_TENANT_NAME = "Production"
+				UIPATH_ORCH_FOLDER_NAME = "INDRA"
+			}
+
+    stages{
+        stage('Download Component'){
+            steps{
+                echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                       ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+               bat """ "C:\\curl-7.85.0_4-win64-mingw\\bin\\curl" -u devopsartifactory:devopsartifactory --insecure https://netfvm-parti01/artifactory/ART-RPA/Desarrollo/${NOMBRE_COMPONENTE}/${Build_ID}/PP-Artefactos.zip -O """
+            }
+
+        }
+        stage('Unzip Component'){
+            steps{
+                bat """ "C:\\Program Files\\7-Zip\\7z.exe" x PP-Artefactos.zip """
+            }
+        }
+        stage('Preparing'){
+            steps{
+                echo "Jenkins Home ${env.JENKINS_HOME}"
+                echo "Jenkins URL ${env.JENKINS_URL}"
+                echo "Jenkins JOB Number ${env.BUILD_NUMBER}"
+                echo "Jenkins JOB Name ${env.JOB_NAME}"
+                echo "GitHub BranhName ${env.BRANCH_NAME}"
+
+            }
+
+        }
+        stage('Build') {
+            steps {
+
+                echo "Building..with ${WORKSPACE}"
+                UiPathPack (
+                    outputPath: "Output\\${env.BUILD_NUMBER}",
+                    projectJsonPath: "project.json",
+                    version:[$class: 'ManualVersionEntry', version: "${MAJOR}.${MINOR}.${env.BUILD_NUMBER}"],
+                    useOrchestrator: false,
+                    traceLevel: "None"
+                )
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+
+
+                UiPathDeploy(
+                    packagePath: "Output\\${env.BUILD_NUMBER}",
+                    orchestratorAddress: "${UIPATH_ORCH_URL}",
+                    orchestratorTenant: "${UIPATH_ORCH_TENANT_NAME}",
+                    folderName: "${UIPATH_ORCH_FOLDER_NAME}",
+                    environments: "Production",
+                    credentials: [$class: 'UserPassAuthenticationEntry', credentialsId:'UiPathUser'],
+                    traceLevel: "None",
+                    entryPointPaths: 'Main.xaml',
+                    createProcess: true
+                )
+            }
+        }
+    }
+    // Options
+	    options {
+	        // Timeout for pipeline
+	        timeout(time:80, unit:'MINUTES')
+	        skipDefaultCheckout()
+	    }
+
+	    post {
+	        success {
+	            echo 'Deployment has been completed!'
+	        }
+	        failure {
+	          echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.JOB_DISPLAY_URL})"
+	        }
+	        always {
+	            /* Clean workspace if success */
+	            cleanWs()
+	        }
+	    }
+}

@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+	parameters{
+        string (name: 'ChangeOrder', description:'Se debe ingresar numero de la OC')
+	}
+    environment {
+        nodo_jenkins_T2 = "jenkins_agent_T2"
+        Ruta_Proyectos_T2 = "/data/workdir_maven_slave_T2/uat/"
+        aplicacion = "./middleware_osb/DeliveryDatasources_OSB11G_UATS11.yml"
+        Nombre_Pipeline = "nombre_base_aplicacion"
+        componente="componente_EAR"
+        host = "${env.MAVEN_IP_T2}"
+    }
+
+    stages {
+        
+        stage('DEPLOY') {
+            steps {
+                node("${env.nodo_jenkins_T2}") {
+                    script {
+				    if(params.ChangeOrder == ""){
+	                        error "Se debe ingresar el numero de la OC"
+	                }
+				    echo " ChangeOrder: ${ChangeOrder}"
+				   
+				    echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+                        sh "sleep 3"
+                        def delivery_config_path = "${Ruta_Proyectos_T2}/${Nombre_Pipeline}"
+                        
+                        def deliver = "false"
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            deliver = sshCommand remote: remote, command: (
+                              "    if [ -f ${delivery_config_path}/delivery.yml ]; then " 
+                                + " echo true; " 
+                                + "else " 
+                                + " echo false;" 
+                                + "fi"
+                            )
+                        }
+                        
+                        
+                        if (deliver == 'true'){
+                            echo """
+                        ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                        ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                        ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                            """
+            
+                            withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                                def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                                sshCommand remote: remote, command: (
+                                    "ContinuousDelivery/start_APP_fija.sh  ${delivery_config_path} ${BUILD_MASTER}  ${env.target} ${BUILD_MASTER} ${aplicacion} ${componente} ${ChangeOrder} | tee logs_CD/cambiar.txt"
+                                )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                           }
+                           archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+            
+                        }else{
+                            echo "No se detectó configuración de entrega continua. Saltando paso..."
+                        }
+                        
+                        
+                    }
+                }
+            }
+        }
+
+    }
+}

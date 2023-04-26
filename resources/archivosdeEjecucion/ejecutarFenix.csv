@@ -1,0 +1,12 @@
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-EnruOrde/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-EnruOrde-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-EnviPlat/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-EnviPlat-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-FuncAdic/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-FuncAdic-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-GeneOrde/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-GeneOrde-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-ImprOrde/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-ImprOrde-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Ordenes/job/APP-Fenix-Ordenes-ProgOrde/job/Operaciones/job/UAT/job/APP-Fenix-Ordenes-ProgOrde-Rollback-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Otros/job/Operaciones/job/UAT/job/APP-Fenix-Otros-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Provision/job/APP-Fenix-Provision-Cumplido/job/Operaciones/job/UAT/job/APP-Fenix-Provision-Cumplido-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Provision/job/APP-Fenix-Provision-EstuTecn/job/Operaciones/job/UAT/job/APP-Fenix-Provision-EstuTecn-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Provision/job/APP-Fenix-Provision-FuncAdic/job/Operaciones/job/UAT/job/APP-Fenix-Provision-FuncAdic-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-Fenix-Provision/job/APP-Fenix-Provision-Provinfr/job/Operaciones/job/UAT/job/APP-Fenix-Provision-Provinfr-RollBack-Test/configure
+http://10.100.82.238:8080/job/Indra-T1/job/APP-Fenix/job/APP-FenixNacional/job/Operaciones/job/UAT/job/APP-FenixNacional-BD-RollBack-Test/configure

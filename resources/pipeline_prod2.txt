@@ -1,0 +1,144 @@
+pipeline {
+ agent any
+ environment {
+
+  //Nombre del pipeline se declara APP-NombreCorrespondiente
+  Nombre_Pipeline = "nombre_base_aplicacion"
+
+  // Prueba de Funcionamiento  aplicacion = "./fenix/PruebasWilliam.yml"
+  aplicacion = "apliacion_base"
+
+  //se indica la url del repositorio
+//   git_url = "http://10.100.82.76:9003/Indra-T1/APP-FenixNacional/Fenix-Provision/Cumplido"
+
+  // el branch indicado puede ser (desarrollo,preproduccion,master)
+//   branch = "Test"
+
+  //se indican las credenciales establecidas para el acceso a git
+  credentialsId = "4d840691-7eae-442e-bb14-ad657a348dfd"
+
+//   ruta_artifactory="https://netfvm-parti01/artifactory/ART-ContenidoAnexo/TTP-20385220"
+
+  //este es el nombre del nodo correspondiente a la torre
+  nodo_jenkins_T2 = "jenkins_agent_T2"
+
+  //TRANSFERENCIA DE ARCHIVOS A MAVEN
+
+  //Se configuran las credenciales de cominicacion entre el jenkins y el maven
+  configName = "JENKINS_AGENT_T2toMAVEN_SLAVE_T2"
+
+  //Ruta donde se almacenan todos los proyectos de T1
+    Ruta_Proyectos_T2 = "/data/workdir_maven_slave_T2/produccion"
+
+  host = "${env.MAVEN_IP_T2}"
+  Nombre_Carpeta="${env.Nombre_Pipeline}_${env.branch}"
+
+
+	// DEPLOY
+
+// 	target = 'elite-uat'
+
+ }
+
+ stages {
+
+    stage('DEPLOY') {
+        steps {
+            node("${env.nodo_jenkins_T2}") {
+                script {
+                    echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+                   def filename = "${RUTA_ARTIFACTORY}"
+                  def JiraId = filename.tokenize("/")
+                  def tamano=JiraId.size()
+                int i=3
+                def arreglo1=[]
+                def arreglo2=[]
+
+                  def unir=JiraId.each{
+
+                    if ("${tamano}">"$i"){
+                        int y="$i"
+                        arreglo1.add("${JiraId[y]}")
+                        arreglo2.add("${JiraId[y]}")
+                        i=i+1
+                     }
+                    }
+
+                  echo "Debe imprimir '${JiraId}'"
+                  echo "Debe imprimir el arreglo1 '${arreglo1}'"
+                  echo "Debe imprimir el arreglo2 '${arreglo2}'"
+                  def tamanoarreglo2=arreglo2.size()
+                  int size2="${tamanoarreglo2}"
+                  size2=size2-1
+                  echo "ESTE es el tamaño del arreglo2 ${size2}"
+                  arreglo2.remove(size2)
+                  echo "Debe imprimir el arreglo2 '${arreglo2}'"
+
+                  def NuevaRuta=arreglo1.join("/")
+                  def NuevoDirectorio=arreglo2.join("/")
+                  echo "vieja RUTA '${RUTA_ARTIFACTORY}'"
+                  echo "NUEVA RUTA '${NuevaRuta}'"
+                  echo "NUEVO DIR '${NuevoDirectorio}'"
+
+                    sh "sleep 3"
+                    //def delivery_config_path = "/lhome/jvilleos/${Ruta_Proyectos_T1}/${Nombre_Pipeline}"
+                    def delivery_config_path = "${Ruta_Proyectos_T2}/${Nombre_Pipeline}"
+
+                    def deliver = "false"
+                    withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                        deliver = sshCommand remote: remote, command: (
+                          "    if [ -f ${delivery_config_path}/delivery.yml ]; then "
+                            + " echo true; "
+                            + "else "
+                            + " echo false;"
+                            + "fi"
+                        )
+                    }
+
+
+                    //def deliver = sh(script: "ssh app@ansible 'if [ -f ${delivery_config_path}/delivery.yml ]; then echo true; else echo false; fi' ", returnStdout:true).trim()
+
+                    if (deliver == 'true'){
+                        echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                    ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                        """
+
+                        //sh """ ssh ansible@ansible /home/ansible/playbooks/ContinuousDelivery/start.sh  ${delivery_config_path} ${Build_id} """
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            sshCommand remote: remote, command: (
+                                // "echo Hola ${RUTA_ARTIFACTORY}"
+                                //"ansible-playbook -T 60 --vault-id /lhome/ansiapd11252021/ContinuousDelivery/delivery/DevOps_CD.yml /lhome/ansiapd11252021/ContinuousDelivery/PruebadescargarArtifactory.yml --extra-vars 'ruta_artifactory=${RUTA_ARTIFACTORY}' -vv"
+                                "ContinuousDelivery/PruebaArtifactory.sh '${NuevaRuta}' ${delivery_config_path} '${NuevoDirectorio}' ${aplicacion}| tee logs_CD/cambiar.txt"
+                                //"ContinuousDelivery/start_APP_fija.sh  ${delivery_config_path} ${BUILD_TEST}  ${env.target} ${BUILD_TEST} ${aplicacion} | tee logs_CD/log_uat_fenix_nacional_bd.txt"
+                                //"ContinuousDelivery/start.sh  ${delivery_config_path} 9  ${env.target} 9"
+                            )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                        }
+                        archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                              writeFile file: 'validacionCodificacion.sh', text: "#!/bin/bash \n" + "if [ -f /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/codificacionErronea.txt ]; then \n" + "rm /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/codificacionErronea.txt\n"+ "exit 1\n" +"else\n" +'echo "OK"\n' + "fi"
+                              sshScript remote: remote, script: "validacionCodificacion.sh"
+                        }
+
+                    }else{
+                        echo "No se detectó configuración de entrega continua. Saltando paso..."
+                    }
+
+
+                }
+            }
+        }
+    }
+
+ }
+}

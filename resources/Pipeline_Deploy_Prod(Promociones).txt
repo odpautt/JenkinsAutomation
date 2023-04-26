@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+	parameters{
+		string (name: 'ChangeOrder', description:'Se debe ingresar numero de la OC')
+	}
+	 
+    environment {
+        //Nombre del pipeline se declara APP-NombreCorrespondiente
+        Nombre_Pipeline = "nombre_base_aplicacion"
+        aplicacion = "./promociones/DeliveryDatasources_Promociones_Prod.yml"
+        //este es el nombre del nodo correspondiente a la torre
+        nodo_jenkins_T1 = "jenkins_agent_T1"
+        Ruta_Proyectos_T1 = "datos/workdir_maven_slave_T1/produccion"
+		ruta="/home/prepago/Ventanas/scrip"
+		reinicio=
+		promocion= nombrepromo
+    }
+
+	stages {
+	
+    stage('DEPLOY') {
+        steps {
+            node("${env.nodo_jenkins_T1}") {
+                script {
+				    if(params.ChangeOrder == ""){
+	                        error "Se debe ingresar el numero de la OC"
+	                }
+					echo " ChangeOrder: ${ChangeOrder}"
+					
+                    echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+					
+                    sh "sleep 3"
+                    def delivery_config_path = "${Ruta_Proyectos_T1}/${Nombre_Pipeline}"                               
+                    def deliver = "false"
+                    withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                        deliver = sshCommand remote: remote, command: (
+                          "    if [ -f ${delivery_config_path}/delivery.yml ]; then " 
+                            + " echo true; " 
+                            + "else " 
+                            + " echo false;" 
+                            + "fi"
+                        )
+                    }
+                    
+                    if (deliver == 'true'){
+                        echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                    ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                        """
+        
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            deliver = sshCommand remote: remote, command: (
+                                "ContinuousDelivery/start_Promocion.sh  ${delivery_config_path} ${BUILD_ID} ${ruta} ${aplicacion} ${reinicio} ${promocion} ${ChangeOrder} | tee logs_CD/cambiar.txt"
+                            )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                        }
+                        archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+						
+						echo " ChangeOrder: ${ChangeOrder}"
+        
+                    }else{
+                        echo "No se detectó configuración de entrega continua. Saltando paso..."
+                    }
+                }
+            }
+        }
+    }
+	}
+}

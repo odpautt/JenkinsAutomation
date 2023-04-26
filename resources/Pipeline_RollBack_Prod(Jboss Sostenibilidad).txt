@@ -1,0 +1,105 @@
+
+pipeline {
+	agent any
+	parameters{
+        string (name: 'ChangeOrder', description:'Se debe ingresar numero de la OC')
+	}
+
+    environment {
+
+		//Nombre del pipeline se declara APP-NombreCorrespondiente
+	    Nombre_Pipeline = "APP-CRM-Portal-Sostenibilidad-Activacionescrm" // cambiar
+	    semilla = "semilla_cambio" // cambiar
+		//se indica El componente a generar
+		componente= "componente_jar_war" // cambiar
+		// Ruta destino de ejecucion en el servidor remoto
+		Ruta_Ejecucion = "/opt/rh/jboss/jboss-instances/jboss0/deployments/activaciones" // "/lhome/ansiapd11252021/test_mover_odp_borrar"
+		//este es el nombre del nodo correspondiente a la torre
+		nodo_jenkins_T2 = "jenkins_agent_T2"
+		//Se configuran las credenciales de cominicacion entre el jenkins y el maven
+		configName = "JENKINS_AGENT_T2toMAVEN_SLAVE_T2"
+		//Ruta donde se almacenan todos los proyectos de T2
+		Ruta_Proyectos_T2 = "/data/workdir_maven_slave_T2/produccion" //"/lhome/ansiapd11252021/test_odp_borrar/CRM_Sostenibilidad_test/test"
+		host = "${env.MAVEN_IP_T2}"
+		// Ruta almacenamiento backup en el servidor remoto
+		Ruta_Backup = "/opt/backup_despliegues"
+ }
+
+    stages {
+
+    stage('DEPLOY') {
+        steps {
+            node("${env.nodo_jenkins_T2}") {
+                script {
+					if(params.ChangeOrder == ""){
+	                        error "Se debe ingresar el numero de la OC"
+	                }
+					echo " ChangeOrder: ${ChangeOrder}"
+
+                    echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════╗
+                    ║                     ORDEN DE CAMBIO A EJECUTAR:    '${ChangeOrder}'                 ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════╝
+                        """
+
+                    sh "sleep 3"
+                    def delivery_config_path = "${Ruta_Proyectos_T2}/${Nombre_Pipeline}/${semilla}"
+
+                    def deliver = "false"
+                    withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                        deliver = sshCommand remote: remote, command: (
+                          "   if [ -f ${delivery_config_path}/delivery.yml ]; then "
+                            + " echo true; "
+                            + "else "
+                            + " echo false;"
+                            + "fi"
+                        )
+                    }
+
+                    if (deliver == 'true'){
+                        echo """
+                    ╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+                    ║             Configuración de despliegue continuo detectado,  iniciando proceso            ║
+                    ╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+                        """
+
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+                            sshCommand remote: remote, command: (
+                                "ContinuousDelivery/Jboss_Sostenibilidad_Backend_RollBack_Prod.sh '${Build_ID}' ${delivery_config_path} '${componente}' ${Ruta_Ejecucion} ${ChangeOrder} '${semilla}' ${Ruta_Backup}| tee logs_CD/cambiar.txt" // cambiar ejm: log_UAT_Activacionescrm_S7sos_backend_rollback.txt
+                            )
+                            sshGet remote: remote, from: 'logs_CD/cambiar.txt', into: 'cambiar.txt', override: true
+                        }
+						archiveArtifacts artifacts: 'cambiar.txt', fingerprint: true
+
+						echo " ChangeOrder: ${ChangeOrder}"
+
+                        withCredentials([usernamePassword(credentialsId: "6fbfc6a2-a5c4-4048-8af9-dabe7120757b", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                            def remote = [name: 'ansible_70', host: "10.100.82.70", user: USERNAME, password: PASSWORD, allowAnyHosts: true]
+							  writeFile file: 'validacionCksum.sh', text: "#!/bin/bash \n" + "if [ -f /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/test.txt ]; then \n" + "rm /lhome/ansiapd11252021/ContinuousDelivery/delivery/TestODP/test.txt\n"+ "exit 1\n" +"else\n" +'echo "OK"\n' + "fi"
+                              try {
+                              sshScript remote: remote, script: "validacionCksum.sh"
+
+                              }
+                              catch(err){
+                                  //echo "Caught: ${err}"
+                                  echo "(DELIVERY) Error hay diferencia en el Cksum !!!"
+                                  currentBuild.result = 'FAILURE'
+                              }
+
+
+                        }
+
+
+
+                    }else{
+                        echo "No se detectó configuración de entrega continua. Saltando paso..."
+                        currentBuild.result = 'ABORTED'
+                    }
+                }
+            }
+        }
+    }
+	}
+}
